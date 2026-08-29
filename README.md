@@ -115,6 +115,58 @@ jobwatch run --buttons        # (다른 터미널에서) 버튼 달린 알림 �
 
 ---
 
+## 매일 자동 실행 (Windows)
+
+작업 스케줄러에 두 개를 등록합니다.
+
+| 작업 | 시점 | 하는 일 |
+|---|---|---|
+| `jobwatch-daily` | 매일 **09:00** | 수집 → 새로 뜬 공고만 슬랙으로 |
+| `jobwatch-bot` | **로그인 시** | Socket Mode 봇 (버튼 처리) |
+
+```powershell
+$root = "C:\경로\jobwatch"
+
+# 매일 09:00 — 노트북이 꺼져 있어 놓쳤다면 켜진 직후 실행
+Register-ScheduledTask -TaskName "jobwatch-daily" -Force `
+  -Action  (New-ScheduledTaskAction -Execute "$root\scriptsun-daily.cmd" -WorkingDirectory $root) `
+  -Trigger (New-ScheduledTaskTrigger -Daily -At 09:00) `
+  -Settings (New-ScheduledTaskSettingsSet -StartWhenAvailable -AllowStartIfOnBatteries `
+             -DontStopIfGoingOnBatteries -ExecutionTimeLimit (New-TimeSpan -Minutes 30))
+
+# 봇 — 로그인 시 시작, 죽으면 5분 뒤 되살림
+Register-ScheduledTask -TaskName "jobwatch-bot" -Force `
+  -Action  (New-ScheduledTaskAction -Execute "$root\scripts\start-bot.cmd" -WorkingDirectory $root) `
+  -Trigger (New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME) `
+  -Settings (New-ScheduledTaskSettingsSet -ExecutionTimeLimit ([TimeSpan]::Zero) `
+             -RestartInterval (New-TimeSpan -Minutes 5) -RestartCount 3)
+```
+
+관리:
+
+```powershell
+Start-ScheduledTask      -TaskName "jobwatch-daily"   # 지금 한 번 실행
+Get-ScheduledTaskInfo    -TaskName "jobwatch-daily"   # 마지막 결과 / 다음 실행
+Disable-ScheduledTask    -TaskName "jobwatch-daily"   # 잠시 중지
+Unregister-ScheduledTask -TaskName "jobwatch-daily"   # 삭제
+
+Get-Content var\daily.log -Tail 20                    # 실행 로그
+Get-Content varot.log   -Tail 20                    # 봇 로그
+```
+
+시간 변경:
+
+```powershell
+Set-ScheduledTask -TaskName "jobwatch-daily" -Trigger (New-ScheduledTaskTrigger -Daily -At 20:00)
+```
+
+> **배치 파일 주의** — `scripts/*.cmd` 는 **CRLF** 여야 합니다. LF 로 저장하면
+> "배치 파일이 아닙니다" 로 죽습니다. 그리고 스크립트를 코드로 생성할 때는
+> `varot.log` 의 `` 가 백스페이스로 바뀌지 않도록 raw 문자열을 쓰세요.
+> 둘 다 실제로 겪은 사고입니다.
+
+---
+
 ## 명령
 
 | 명령 | 하는 일 |
@@ -124,6 +176,7 @@ jobwatch run --buttons        # (다른 터미널에서) 버튼 달린 알림 �
 | `jobwatch list --verdict INTERESTED` | 관심 표시한 공고 |
 | `jobwatch runs` | 실행 이력 |
 | `jobwatch bot` | Socket Mode 봇 (버튼 처리) |
+| `scriptsun-daily.cmd` | 스케줄러가 부르는 진입점 (로그 남김) |
 
 ---
 
