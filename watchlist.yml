@@ -1,0 +1,73 @@
+# 관심 조건. 하나라도 맞는 공고가 새로 뜨면 슬랙으로 알림이 옵니다.
+#
+# 조건
+#   any_of / all_of / none_of : 키워드 (none_of 가 가장 우선)
+#   search_in   : 키워드를 찾을 필드 (제목 / 회사 / 카테고리 / 스택). 비우면 전부
+#   locations   : 근무지 부분일치
+#   max_career  : 요구 경력이 N년 이하인 공고 (내가 지원 가능한 것)
+#   min_career  : 요구 경력이 N년 이상인 공고
+#   newcomer    : true 면 신입 지원 가능 공고만
+#
+# ── 조건을 좁힐 때 배운 것 (jobwatch check --explain 으로 확인) ────────────
+#
+# 1) 카테고리는 회사가 직접 고르는 값이라 자주 틀린다.
+#    회로설계·기구설계 공고가 "서버/백엔드 개발자" 로 등록돼 있었다.
+#
+# 2) 스택에 React/TypeScript 가 있다고 프론트 공고가 아니다.
+#    "AI 단백질 디자인", "멀티카메라 영상처리" 공고가 스택에 React 를 적어 뒀다.
+#    범용 스택은 신호가 약하므로, 프론트 전용 스택(Next.js·Zustand 등)만 쓴다.
+#
+# 3) 짧고 흔한 한글 단어는 제목에서 찾으면 안 된다.
+#    "모션" 으로 잡으니 로봇 "모션 플래닝 엔지니어" 가 걸렸다.
+#
+# 4) 카테고리만 맞는 관리직이 섞인다.
+#    "개발팀 팀장", "개발 PM" 이 카테고리 프론트엔드로 등록돼 있었다.
+#
+# 조건을 고치면 `jobwatch check --explain` 으로 근거부터 확인하세요.
+
+watches:
+  # 본진 — 제목/카테고리에 프론트라고 명시된 공고만. 가장 정확하다.
+  - name: 프론트엔드
+    search_in: [제목, 카테고리]
+    any_of:
+      - 프론트엔드
+      - 프론트
+      - Frontend
+      - Front-End
+      - 웹 개발자
+      - 퍼블리셔
+    none_of: [인턴, 계약직, 파견, 팀장, PM, 매니저, PL]
+    max_career: 5
+
+  # 프론트 전용 스택이 박힌 공고. 제목이 애매해도 이건 거의 확실하다.
+  # React/TypeScript 는 백엔드·AI 공고에도 흔해서 일부러 뺐다.
+  - name: 내 스택 적중
+    search_in: [스택]
+    any_of:
+      - Next.js
+      - TanStack Query
+      - React Query
+      - Zustand
+      - Recoil
+      - Framer Motion
+      - Tailwind CSS
+    none_of: [인턴, 팀장, PM, 매니저]
+    max_career: 5
+
+  # 인터랙션·모션 특화 — 차별화 포인트라 따로 본다.
+  # "모션" 같은 한글 단어는 오탐이 심해서 스택 이름만 쓴다.
+  - name: 인터랙션·모션
+    search_in: [스택]
+    any_of:
+      - GSAP
+      - Framer Motion
+      - Three.js
+      - WebGL
+      - Lottie
+
+  # 부산 근무 — 지역 우선이라 직무는 넓게 본다.
+  - name: 부산 웹
+    search_in: [제목, 카테고리]
+    locations: [부산]
+    any_of: [프론트, Frontend, 웹, 퍼블리셔, React]
+    none_of: [인턴, 파견]

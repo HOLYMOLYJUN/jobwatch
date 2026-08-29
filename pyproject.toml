@@ -1,0 +1,42 @@
+[project]
+name = "jobwatch"
+version = "0.1.0"
+description = "관심 조건에 맞는 채용공고가 새로 뜨면 슬랙으로 알려주는 개인용 봇"
+requires-python = ">=3.11"
+dependencies = [
+    "httpx>=0.27",
+    "sqlalchemy>=2.0",
+    "pydantic-settings>=2.2",
+    "pyyaml>=6.0",
+    "typer>=0.12",
+    "rich>=13.7",
+    "tenacity>=8.3",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.2", "ruff>=0.4"]
+bot = ["slack-bolt>=1.18"]
+
+[project.scripts]
+jobwatch = "jobwatch.cli:app"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "C4", "SIM"]
+
+[tool.ruff.lint.per-file-ignores]
+"src/jobwatch/cli.py" = ["B008"]
