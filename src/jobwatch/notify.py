@@ -147,7 +147,65 @@ def build_blocks(positions: list[Position], with_buttons: bool = False) -> list[
     return blocks
 
 
+class BotNotifier:
+    """봇 토큰으로 직접 보내는 알림 (chat.postMessage).
+
+    버튼을 쓰려면 이쪽이어야 한다. 웹훅으로 보낸 메시지는 봇이 쓴 글이 아니라서
+    나중에 chat.update 로 고칠 수 없다(cant_update_message). 버튼을 누른 뒤
+    "관심 표시함" 으로 메시지를 바꾸려면 봇이 그 메시지의 작성자여야 한다.
+    """
+
+    def __init__(self, token: str | None = None, channel: str | None = None) -> None:
+        from slack_sdk import WebClient
+
+        self.channel = channel or settings.slack_channel
+        self.client = WebClient(token=token or settings.slack_bot_token)
+
+    def safe_send(self, positions: list[Position]) -> bool:
+        try:
+            return self.send(positions)
+        except Exception as exc:
+            log.warning("알림 실패(무시하고 계속): %s", exc)
+            return False
+
+    def send(self, positions: list[Position]) -> bool:
+        from slack_sdk.errors import SlackApiError
+
+        try:
+            self.client.chat_postMessage(
+                channel=self.channel,
+                text=f"새 채용공고 {len(positions)}건",
+                blocks=build_blocks(positions, with_buttons=True),
+            )
+        except SlackApiError as exc:
+            err = exc.response.get("error")
+            if err == "channel_not_found":
+                raise RuntimeError(
+                    f"채널 '{self.channel}' 을 찾을 수 없습니다. "
+                    "JW_SLACK_CHANNEL 을 실제 채널명으로 고치세요."
+                ) from exc
+            if err == "not_in_channel":
+                raise RuntimeError(
+                    f"봇이 '{self.channel}' 채널에 없습니다. 채널에서 봇을 초대하거나 "
+                    "chat:write.public 스코프를 추가하세요."
+                ) from exc
+            raise
+        return True
+
+
 def build_notifier(with_buttons: bool = False):
+    """버튼이 필요하면 봇 토큰, 아니면 웹훅.
+
+    버튼 없는 알림은 웹훅이 더 간단하다(토큰 불필요). 하지만 버튼을 쓰는 순간
+    메시지 수정 권한이 필요해지므로 봇 토큰으로 보내야 한다.
+    """
+    if with_buttons:
+        if settings.slack_bot_token:
+            return BotNotifier()
+        log.warning(
+            "버튼을 요청했지만 JW_SLACK_BOT_TOKEN 이 없습니다. "
+            "웹훅으로 보내며, 버튼을 눌러도 메시지가 수정되지 않습니다."
+        )
     if settings.slack_webhook_url:
         return SlackNotifier(with_buttons=with_buttons)
     log.info("JW_SLACK_WEBHOOK_URL 미설정 - 콘솔로 출력합니다")

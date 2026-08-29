@@ -4,6 +4,10 @@ __pycache__/
 *.egg-info/
 .env*
 !.env.example
+# 점 없는 'env' 도 막는다. 실수로 이 이름으로 만들면 .env* 규칙에
+# 걸리지 않아 토큰이 그대로 커밋된다(실제로 GitHub 푸시 보호에 걸렸다).
+/env
+/env.*
 var/*
 !var/.gitkeep
 .pytest_cache/

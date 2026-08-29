@@ -87,13 +87,28 @@ def run_bot() -> None:
         pos = _apply(int(action["value"]), verdict, body["user"].get("name", "?"))
         if pos is None:
             return
+
+        # 기록은 이미 끝났다. 화면 갱신이 실패해도 사용자에게는 결과를 알린다.
         msg = body["message"]
-        client.chat_update(
-            channel=body["channel"]["id"],
-            ts=msg["ts"],
-            blocks=_resolved_blocks(msg.get("blocks", []), pos, verdict),
-            text=msg.get("text", "채용공고 알림"),
-        )
+        try:
+            client.chat_update(
+                channel=body["channel"]["id"],
+                ts=msg["ts"],
+                blocks=_resolved_blocks(msg.get("blocks", []), pos, verdict),
+                text=msg.get("text", "채용공고 알림"),
+            )
+        except Exception as exc:
+            hint = ""
+            if "cant_update_message" in str(exc):
+                # 웹훅으로 보낸 메시지는 봇이 쓴 글이 아니라 수정할 수 없다.
+                hint = " (이 알림은 웹훅으로 보낸 것이라 수정할 수 없습니다. "
+                hint += "`jobwatch run --buttons` 는 봇 토큰으로 보내야 합니다)"
+            log.warning("메시지 수정 실패: %s", exc)
+            client.chat_postEphemeral(
+                channel=body["channel"]["id"],
+                user=body["user"]["id"],
+                text=f"{EMOJI[verdict]} 기록했습니다 — {pos.title}{hint}",
+            )
 
     @app.action("mark_interested")
     def on_interested(ack, body, client):

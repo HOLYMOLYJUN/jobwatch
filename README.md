@@ -99,10 +99,19 @@ $ jobwatch check --explain
    → `xoxb-...` 를 `JW_SLACK_BOT_TOKEN` 에
 3. **Interactivity & Shortcuts** → 토글 On (Socket Mode 라 URL 은 필요 없음)
 
+4. **채널 지정** — `.env` 의 `JW_SLACK_CHANNEL` 을 실제 채널명으로
+
 ```bash
 pip install -e ".[bot]"
 jobwatch bot                  # 켜 두면 버튼과 /jobs 명령이 동작
+jobwatch run --buttons        # (다른 터미널에서) 버튼 달린 알림 발송
 ```
+
+> **`--buttons` 는 웹훅이 아니라 봇 토큰으로 보냅니다.**
+> 슬랙은 메시지 작성자만 수정할 수 있어서, 웹훅으로 보낸 알림은 버튼을 눌러도
+> `cant_update_message` 로 화면이 안 바뀝니다. 버튼은 눌리는데 반응이 없는 것처럼
+> 보이는 상태라 원인 찾기가 까다롭습니다. 그래서 `--buttons` 를 주면 자동으로
+> 봇 토큰 발송으로 전환합니다.
 
 ---
 
